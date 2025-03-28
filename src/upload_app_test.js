@@ -1,24 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, auth } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { initializeApp } from 'firebase/app';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-function UploadAppTest() {
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [downloadUrl, setDownloadUrl] = useState(null);
+const firebaseConfig = {
+  apiKey: "AIzaSyCXLiGBdPLTtUKk6IRfq-FWz4sZc1c7rCk",
+  authDomain: "spp-storing-app.firebaseapp.com",
+  projectId: "spp-storing-app",
+  storageBucket: "spp-storing-app.appspot.com",
+  messagingSenderId: "230498060957",
+  appId: "1:230498060957:web:ad9a7d6fd321555a9ea274",
+  measurementId: "G-W5J754LYW0"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const storage = getStorage(app);
+
+function UploadTestApp() {
+  const [userId, setUserId] = useState(null);
+  const [file, setFile] = useState(null);
+  const [url, setUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const reportId = 'test123'; // dit mag je aanpassen per test
 
-  // ✅ Check of je ingelogd bent
+  // Inloggen
   useEffect(() => {
+    signInAnonymously(auth).catch((err) => console.error("❌ Auth error:", err));
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        console.log('✅ Ingelogd als:', user.uid);
+        console.log("✅ Ingelogd als:", user.uid);
         setUserId(user.uid);
       } else {
-        console.log('❌ Niet ingelogd!');
+        console.warn("❌ Niet ingelogd");
+        setUserId(null);
       }
     });
 
@@ -26,20 +42,20 @@ function UploadAppTest() {
   }, []);
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
-    setUploading(true);
-    setError(null);
+    if (!file || !userId) return;
 
-    const path = `uploads/reports/${reportId}/${selectedFile.name}`;
-    const fileRef = ref(storage, path);
+    const filePath = `uploads/reports/demo-${Date.now()}/${file.name}`;
+    const storageRef = ref(storage, filePath);
 
     try {
-      const snapshot = await uploadBytes(fileRef, selectedFile);
-      const url = await getDownloadURL(snapshot.ref);
-      setDownloadUrl(url);
-      console.log('✅ Upload geslaagd:', url);
+      setUploading(true);
+      setError(null);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log("✅ File uploaded:", downloadURL);
+      setUrl(downloadURL);
     } catch (err) {
-      console.error('❌ Upload mislukt:', err);
+      console.error("❌ Upload failed:", err);
       setError(err.message);
     } finally {
       setUploading(false);
@@ -47,35 +63,29 @@ function UploadAppTest() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>SPP Storing App – Upload Test</h2>
+    <div style={{ padding: 40, fontFamily: 'Arial' }}>
+      <h1>✅ Upload Test</h1>
+      <p style={{ fontSize: 14 }}>Gebruiker: {userId || "⛔ Niet ingelogd"}</p>
 
-      {userId ? (
-        <p style={{ fontSize: 14, color: 'gray' }}>🔐 Ingelogd als: {userId}</p>
-      ) : (
-        <p style={{ fontSize: 14, color: 'red' }}>⛔ Niet ingelogd</p>
-      )}
-
-      <input type="file" onChange={(e) => setSelectedFile(e.target.files[0])} />
+      <input type="file" onChange={(e) => setFile(e.target.files[0])} />
       <br /><br />
-      <button onClick={handleUpload} disabled={!selectedFile || uploading}>
+
+      <button onClick={handleUpload} disabled={!file || !userId || uploading}>
         {uploading ? 'Bezig met uploaden...' : 'Upload'}
       </button>
 
-      {downloadUrl && (
+      {url && (
         <div style={{ marginTop: 20 }}>
           <p>✅ Download link:</p>
-          <a href={downloadUrl} target="_blank" rel="noreferrer">{downloadUrl}</a>
+          <a href={url} target="_blank" rel="noreferrer">{url}</a>
         </div>
       )}
 
       {error && (
-        <div style={{ marginTop: 20, color: 'red' }}>
-          <p>❌ Fout: {error}</p>
-        </div>
+        <p style={{ color: 'red' }}>❌ Fout: {error}</p>
       )}
     </div>
   );
 }
 
-export default UploadAppTest;
+export default UploadTestApp;

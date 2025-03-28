@@ -1,13 +1,8 @@
 import React from 'react';
-import UploadAppTest from './upload_app_test';
+import UploadTestApp from './upload_test_app';
 
 function App() {
-  return (
-    <div style={{ padding: 40 }}>
-      <h1>SPP Storing App – Upload Test</h1>
-      <UploadAppTest />
-    </div>
-  );
+  return <UploadTestApp />;
 }
 
 export default App;
